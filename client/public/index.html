@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Shared Drawing (p5.js + WS)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+  <style>
+    body { margin:0; background:#fafafa; font-family:sans-serif; }
+    #canvasWrap { display:flex; justify-content:center; align-items:center; height:100vh; }
+    canvas { background:#fff; border:2px solid #ddd; border-radius:8px; }
+    .top { position:fixed; top:10px; left:10px; font-size:14px; color:#333; }
+  </style>
+</head>
+<body>
+  <div class="top">drag and draw</div>
+  <div id="canvasWrap"></div>
+
+  <script>
+    let ws;
+    let myColor;
+    const userId = 'u_' + Math.random().toString(36).slice(2, 8);
+    const roomId = 'ROOM1'; 
+
+    function setup() {
+      createCanvas(700, 500).parent('canvasWrap');
+      background(255);
+      strokeWeight(3);
+      myColor = [random(60,255), random(60,255), random(60,255)];
+
+      ws = new WebSocket('ws://localhost:3002');
+      ws.onopen = () => {
+        console.log('WS connected');
+        ws.send(JSON.stringify({ type:'join', roomId, userId }));
+      };
+
+      ws.onmessage = (ev) => {
+        const msg = safeParse(ev.data);
+        if (!msg) return;
+
+        if (msg.type === 'draw' && msg.userId !== userId) {
+      
+          stroke(msg.color[0], msg.color[1], msg.color[2]);
+          line(msg.px, msg.py, msg.x, msg.y);
+        }
+      };
+
+      ws.onclose = () => console.log('WS closed');
+      ws.onerror = (e) => console.warn('WS error', e);
+    }
+
+    function mouseDragged() {
+      stroke(myColor[0], myColor[1], myColor[2]);
+      line(pmouseX, pmouseY, mouseX, mouseY);
+
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'draw',
+          roomId,
+          userId,
+          x: mouseX,  y: mouseY,
+          px: pmouseX, py: pmouseY,
+          color: myColor
+        }));
+      }
+    }
+
+    function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
+  </script>
+</body>
+</html>
