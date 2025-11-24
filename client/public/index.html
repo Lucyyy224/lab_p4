@@ -28,7 +28,7 @@
       strokeWeight(3);
       myColor = [random(60,255), random(60,255), random(60,255)];
 
-      ws = new WebSocket('ws://localhost:3002');
+      ws = new WebSocket('wss://lab-p4-server.onrender.com');
       ws.onopen = () => {
         console.log('WS connected');
         ws.send(JSON.stringify({ type:'join', roomId, userId }));
