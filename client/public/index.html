@@ -1,72 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- linking stylesheet and adding p5.js library -->
   <meta charset="UTF-8" />
-  <title>Shared Drawing (p5.js + WS)</title>
+  <title>shared Drawing</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
-  <style>
-    body { margin:0; background:#fafafa; font-family:sans-serif; }
-    #canvasWrap { display:flex; justify-content:center; align-items:center; height:100vh; }
-    canvas { background:#fff; border:2px solid #ddd; border-radius:8px; }
-    .top { position:fixed; top:10px; left:10px; font-size:14px; color:#333; }
-  </style>
 </head>
+
 <body>
-  <div class="top">drag and draw</div>
-  <div id="canvasWrap"></div>
+  <!-- setting up layout with sidebar + canvas area -->
+  <div class="layout">
 
+    <!-- sidebar: includes session info, topic, and tools -->
+    <aside class="side">
+
+      <!-- showing room info and welcome text -->
+      <div class="card">
+        <div class="title">Session</div>
+        <div>Room: <b id="roomId">ROOM1</b></div>
+        <div class="muted">Come draw with a partner!</div>
+      </div>
+
+      <!-- showing the random drawing topic -->
+      <div class="card">
+        <div class="title">Topic</div>
+        <div>Draw: <b id="promptLabel">—</b></div>
+      </div>
+
+      <!-- showing tools: color picker, brushes, and clear button -->
+      <div class="card tools">
+        <div class="title">Tools</div>
+
+        <div>Color</div>
+        <div class="colorpick">
+          <input id="colorInput" type="color" value="#000000" />
+          <div id="colorPreview" class="color-preview" style="background:#000000"></div>
+        </div>
+
+        <div>Brush</div>
+        <div id="brushRow" class="row"></div>
+
+        <button id="clearBtn" class="btn">Clear (sync)</button>
+      </div>
+    </aside>
+
+    <!-- right side: main drawing canvas -->
+    <main>
+      <!-- header bar above canvas -->
+      <div class="topbar">
+        <div> Let's Shared Drawing</div>
+        <div class="muted">Drag to draw • Pick any color & brush</div>
+      </div>
+
+      <!-- canvas container -->
+      <div class="main">
+        <div id="canvasWrap"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- all scripts for drawing + WebSocket connection -->
   <script>
-    let ws;
-    let myColor;
-    const userId = 'u_' + Math.random().toString(36).slice(2, 8);
-    const roomId = 'ROOM1'; 
+    const WS_URL = 'wss://lab-p4-server.onrender.com';
+    const url = new URL(location.href);
+    const roomId = url.searchParams.get('room') || 'ROOM1';
+    const userId = 'u_' + Math.random().toString(36).slice(2,8);
+    document.getElementById('roomId').textContent = roomId;
 
-    function setup() {
-      createCanvas(700, 500).parent('canvasWrap');
-      background(255);
-      strokeWeight(3);
-      myColor = [random(60,255), random(60,255), random(60,255)];
+    const BRUSHES = [2, 5, 10];
+    let ws, connected = false;
+    let currentColor = [0,0,0];
+    let currentBrush = BRUSHES[1];
+    let topic = null;
 
-      ws = new WebSocket('wss://lab-p4-server.onrender.com');
+    const colorInput = document.getElementById('colorInput');
+    const colorPreview = document.getElementById('colorPreview');
+    const brushRow = document.getElementById('brushRow');
+
+    // converting between hex and RGB colors
+    function hexToRgb(hex){ const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return m ? [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] : [0,0,0]; }
+    function rgbToHex([r,g,b]){ const to2 = v => v.toString(16).padStart(2,'0'); return `#${to2(r)}${to2(g)}${to2(b)}`; }
+
+    // updating color when user picks a new one
+    colorInput.addEventListener('input', () => {
+      currentColor = hexToRgb(colorInput.value);
+      colorPreview.style.background = colorInput.value;
+    });
+
+    // rendering brush size buttons
+    function renderBrushes(){
+      brushRow.innerHTML = '';
+      BRUSHES.forEach(w => {
+        const btn = document.createElement('button');
+        btn.className = 'brush' + (currentBrush === w ? ' active' : '');
+        btn.textContent = `${w}px`;
+        btn.onclick = () => { currentBrush = w; renderBrushes(); };
+        brushRow.appendChild(btn);
+      });
+    }
+    renderBrushes();
+
+    // clearing the canvas both locally and online
+    document.getElementById('clearBtn').onclick = () => {
+      clearBoard();
+      if (connected) ws.send(JSON.stringify({ type:'clear', roomId, userId }));
+    };
+
+    // connecting to the WebSocket server
+    function connectWS(){
+      ws = new WebSocket(WS_URL);
       ws.onopen = () => {
-        console.log('WS connected');
+        connected = true;
         ws.send(JSON.stringify({ type:'join', roomId, userId }));
       };
-
       ws.onmessage = (ev) => {
         const msg = safeParse(ev.data);
         if (!msg) return;
 
+        if (msg.type === 'roomState') {
+          topic = msg.topic;
+          updatePromptUI(topic);
+        }
         if (msg.type === 'draw' && msg.userId !== userId) {
-      
+          strokeWeight(msg.brush || 5);
           stroke(msg.color[0], msg.color[1], msg.color[2]);
           line(msg.px, msg.py, msg.x, msg.y);
         }
+        if (msg.type === 'clear' && msg.userId !== userId) clearBoard();
       };
+      ws.onclose = () => { connected = false; };
+    }
+    connectWS();
 
-      ws.onclose = () => console.log('WS closed');
-      ws.onerror = (e) => console.warn('WS error', e);
+    // setting up the p5.js canvas
+    function setup(){
+      createCanvas(900, 560).parent('canvasWrap');
+      clearBoard();
+      colorInput.value = rgbToHex(currentColor);
+      colorPreview.style.background = colorInput.value;
     }
 
-    function mouseDragged() {
-      stroke(myColor[0], myColor[1], myColor[2]);
+    function draw(){}
+
+    // sending drawing strokes to other players
+    function mouseDragged(){
+      if (!insideCanvas()) return;
+      strokeWeight(currentBrush);
+      stroke(currentColor[0], currentColor[1], currentColor[2]);
       line(pmouseX, pmouseY, mouseX, mouseY);
-
-
-      if (ws && ws.readyState === WebSocket.OPEN) {
+      if (connected) {
         ws.send(JSON.stringify({
-          type: 'draw',
-          roomId,
-          userId,
-          x: mouseX,  y: mouseY,
-          px: pmouseX, py: pmouseY,
-          color: myColor
+          type:'draw', roomId, userId,
+          x:mouseX, y:mouseY, px:pmouseX, py:pmouseY,
+          color:currentColor, brush:currentBrush
         }));
       }
     }
 
+    // helper functions for clarity
+    function clearBoard(){ background(255); }
+    function insideCanvas(){ return mouseX>=0 && mouseX<=width && mouseY>=0 && mouseY<=height; }
     function safeParse(s){ try { return JSON.parse(s); } catch { return null; } }
+
+    // updating the topic text on screen
+    const promptLabel = document.getElementById('promptLabel');
+    function updatePromptUI(tp){ promptLabel.textContent = tp || '—'; }
   </script>
 </body>
 </html>

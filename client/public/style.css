@@ -1,0 +1,171 @@
+/* setting up the cute warm yellow theme */
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600&display=swap');
+
+:root {
+  --bg: #fff8e1;
+  --border: #e2d7a7;
+  --fg: #5a3a1a;
+}
+
+/* making the overall page soft and cozy */
+body {
+  margin: 0;
+  background: var(--bg);
+  font: 16px/1.5 'Baloo 2', cursive;
+  color: var(--fg);
+}
+
+/* building the layout with a sidebar and main canvas */
+.layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 16px;
+  padding: 16px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* styling the sidebar cards */
+.side {
+  background: #fffdf5;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* giving each info block a cute rounded card style */
+.card {
+  background: #fffefc;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+/* making titles bolder and slightly larger */
+.title {
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: var(--fg);
+}
+
+/* styling the tools section */
+.tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* arranging elements horizontally in a row */
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* laying out the color picker and preview box */
+.colorpick {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* showing the selected color inside a small rounded box */
+.color-preview {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 2px solid var(--border);
+}
+
+/* customizing the color picker input */
+input[type="color"] {
+  width: 44px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* styling the brush size buttons */
+.brush {
+  padding: 6px 10px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: #fffaf0;
+  cursor: pointer;
+  color: var(--fg);
+  transition: all 0.2s ease;
+}
+.brush:hover {
+  background: #fff5d1;
+}
+.brush.active {
+  border-color: var(--fg);
+  font-weight: 600;
+}
+
+/* centering the canvas area */
+.main {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* wrapping the canvas neatly */
+#canvasWrap {
+  position: relative;
+}
+
+/* giving the drawing canvas a white background and drop shadow */
+canvas {
+  background: #ffffff;
+  border-radius: 14px;
+  border: 3px solid var(--border);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* adding a soft header bar above the canvas */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  padding: 10px 14px;
+  background: #fffdf5;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--fg);
+}
+
+/* making secondary text a lighter brown */
+.muted {
+  color: #8c6b42;
+}
+
+/* styling the clear button */
+.btn {
+  height: 34px;
+  padding: 0 12px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: #fff9e6;
+  cursor: pointer;
+  color: var(--fg);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.btn:hover {
+  background: #ffeeb8;
+}
